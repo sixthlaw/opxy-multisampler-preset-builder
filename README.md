@@ -4,7 +4,7 @@ A simple, web-based tool for creating multisampler presets for the Teenage Engin
 
 **[Try the Demo →](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)**
 
-![Drag and drop your samples](drag-drop.png)
+[![Drag and drop your samples](drag-drop.png)](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)
 
 ---
 
@@ -41,7 +41,7 @@ No DAW required. No manual JSON editing. No command-line tools.
 3. **Name Your Preset** — Give it a memorable name
 4. **Download** — Get a ZIP containing your `.preset` folder
 
-![Configure audio quality](audio-quality.png)
+[![Configure audio quality](audio-quality.png)](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)
 
 That's it. Copy the `.preset` folder to your OP-XY and you're ready to play.
 
@@ -49,7 +49,7 @@ That's it. Copy the `.preset` folder to your OP-XY and you're ready to play.
 
 If a sample's pitch can't be automatically detected, you'll see an interactive keyboard to assign notes manually. Play the sample, click the key, done.
 
-![Assign notes manually](assign-notes.png)
+[![Assign notes manually](assign-notes.png)](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)
 
 ---
 
