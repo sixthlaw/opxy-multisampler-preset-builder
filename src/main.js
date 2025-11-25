@@ -295,21 +295,33 @@ function updateDensityInfo() {
 function detectGroupingPatterns(files) {
   if (files.length < 4) return null;
 
-  // Extract suffixes from all filenames
-  // A suffix is any sequence of _WORD or -WORD at the end (can be compound like _L1_RR2)
+  // Suffix pattern for grouping (velocity, round-robin, layers)
   const suffixRegex = /([_-][A-Za-z]+\d*)+$/;
 
   const fileSuffixes = [];
   for (const file of files) {
-    const baseName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-    const match = baseName.match(suffixRegex);
+    let baseName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+
+    // Strip any leading special chars (bullets, numbers with spaces)
+    baseName = baseName.replace(/^[•\d\s]+/, '');
+
+    // Remove ALL note indicators from the filename before checking for grouping suffix
+    // This handles notes anywhere: end, middle, with various separators
+    // Matches: "C4", "C#4", "Db4", "A#3", etc. with optional separators before/after
+    const nameWithoutNotes = baseName.replace(/[\s_-]*[A-G][#b]?\d+[\s_-]*/gi, '_NOTE_');
+
+    // Now check for suffix pattern on the cleaned name
+    const match = nameWithoutNotes.match(suffixRegex);
     if (match) {
-      fileSuffixes.push({
-        file,
-        baseName,
-        suffix: match[0].toUpperCase(),
-        baseWithoutSuffix: baseName.slice(0, -match[0].length)
-      });
+      // Make sure we're not matching a note placeholder as a suffix
+      if (!match[0].includes('_NOTE_')) {
+        fileSuffixes.push({
+          file,
+          baseName,
+          suffix: match[0].toUpperCase(),
+          baseWithoutSuffix: nameWithoutNotes.slice(0, -match[0].length)
+        });
+      }
     }
   }
 
@@ -375,13 +387,26 @@ function getBaseNameWithoutGroupSuffix(filename, patternInfo) {
   const baseName = filename.replace(/\.[^/.]+$/, ''); // Remove extension
   const extension = filename.match(/\.[^/.]+$/)?.[0] || '';
 
+  // Remove note indicators first (same pattern as detectGroupingPatterns)
+  const nameWithoutNotes = baseName.replace(/[\s_-]*[A-G][#b]?\d+[\s_-]*/gi, '_NOTE_');
+
   // Use the same suffix regex as detectGroupingPatterns
   const suffixRegex = /([_-][A-Za-z]+\d*)+$/;
-  const match = baseName.match(suffixRegex);
+  const match = nameWithoutNotes.match(suffixRegex);
 
-  if (match) {
-    // Return the filename with the suffix removed
-    return baseName.slice(0, -match[0].length) + extension;
+  if (match && !match[0].includes('_NOTE_')) {
+    // Find where the suffix starts in the original filename
+    // We need to remove it from the original, not the cleaned version
+    const suffixLength = match[0].length;
+    const cleanedWithoutSuffix = nameWithoutNotes.slice(0, -suffixLength);
+
+    // Count how many chars we removed from original to get to this point
+    // The suffix position in original = length - suffix length (approximately)
+    // Better approach: find the suffix pattern in the original baseName
+    const originalMatch = baseName.match(suffixRegex);
+    if (originalMatch) {
+      return baseName.slice(0, -originalMatch[0].length) + extension;
+    }
   }
 
   return filename;
