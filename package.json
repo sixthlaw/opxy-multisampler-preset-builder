@@ -1,0 +1,28 @@
+{
+  "name": "opxy-multisampler-preset-builder",
+  "version": "1.0.0",
+  "description": "Web-based OP-XY multisampler preset builder - create presets from your samples",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "op-xy",
+    "teenage-engineering",
+    "multisampler",
+    "preset"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "pitchfinder": "^2.3.2",
+    "pitchy": "^4.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.21"
+  }
+}
