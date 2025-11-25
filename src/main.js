@@ -10,23 +10,19 @@ const QUALITY_PRESETS = {
   lofi: { sampleRate: 22050 }
 };
 
-// Sample density presets - based on multisampling best practices
-// Interval is the target semitone spacing between samples
+// Sample density presets - controls how many samples are included in the preset
 const DENSITY_PRESETS = {
   full: {
     maxSamples: 24,
-    interval: 4,  // Major third - highest quality
-    description: 'Every major 3rd'
+    description: 'Up to 24 samples'
   },
   balanced: {
     maxSamples: 12,
-    interval: 7,  // Perfect fifth - good balance
-    description: 'Every perfect 5th'
+    description: 'Up to 12 samples'
   },
   lite: {
     maxSamples: 5,
-    interval: 14, // Just over an octave - relies on pitch shifting
-    description: 'Every octave+'
+    description: 'Up to 5 samples'
   }
 };
 
@@ -1340,7 +1336,6 @@ async function processSample(file, quality, bitDepth = 16) {
 function selectSamplesByDensity(samples, density) {
   const preset = DENSITY_PRESETS[density];
   const maxSamples = preset.maxSamples;
-  const targetInterval = preset.interval;
 
   // Sort by root note
   const withNotes = samples.filter(s => s.rootNote !== null).sort((a, b) => a.rootNote - b.rootNote);
@@ -1352,7 +1347,7 @@ function selectSamplesByDensity(samples, density) {
     return [...withNotes, ...withoutNotes.slice(0, remaining)];
   }
 
-  // Need to reduce - select samples based on target interval
+  // Need to reduce - select exactly maxSamples spread evenly across the range
   const minNote = withNotes[0].rootNote;
   const maxNote = withNotes[withNotes.length - 1].rootNote;
   const range = maxNote - minNote;
@@ -1361,11 +1356,8 @@ function selectSamplesByDensity(samples, density) {
     return withNotes.slice(0, maxSamples);
   }
 
-  // Calculate how many samples we need to cover the range at target interval
-  const idealCount = Math.ceil(range / targetInterval) + 1;
-  const targetCount = Math.min(idealCount, maxSamples);
-
-  // Select samples spread across the range at roughly target interval
+  // Select exactly maxSamples spread across the range
+  const targetCount = maxSamples;
   const selected = [];
   const step = range / (targetCount - 1 || 1);
 
