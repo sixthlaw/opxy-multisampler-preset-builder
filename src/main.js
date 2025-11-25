@@ -34,30 +34,26 @@ const DENSITY_PRESETS = {
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const NOTE_ALIASES = { 'Db': 'C#', 'Eb': 'D#', 'Fb': 'E', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'Cb': 'B' };
 
-// Grouping patterns for velocity layers, round-robins, etc.
-const GROUPING_PATTERNS = [
-  // Round-robin patterns
-  { regex: /_RR(\d+)$/i, type: 'round-robin', label: 'Round Robin' },
-  { regex: /-RR(\d+)$/i, type: 'round-robin', label: 'Round Robin' },
-  { regex: /_R(\d+)$/i, type: 'round-robin', label: 'Round Robin' },
-
-  // Velocity layers (descriptive)
-  { regex: /[_-](fff)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](ff)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](f)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](mf)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](mp)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](p)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](pp)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](ppp)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /[_-](hard|medium|soft|light)$/i, type: 'velocity', label: 'Velocity Layer' },
-
-  // Velocity layers (numeric)
-  { regex: /_V(\d+)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /-V(\d+)$/i, type: 'velocity', label: 'Velocity Layer' },
-  { regex: /_L(\d+)$/i, type: 'layer', label: 'Layer' },
-  { regex: /-L(\d+)$/i, type: 'layer', label: 'Layer' },
-];
+// Known suffix patterns (for labeling purposes)
+const KNOWN_PATTERN_LABELS = {
+  'rr': 'Round Robin',
+  'r': 'Round Robin',
+  'v': 'Velocity',
+  'l': 'Layer',
+  'vel': 'Velocity',
+  'fff': 'Velocity',
+  'ff': 'Velocity',
+  'f': 'Velocity',
+  'mf': 'Velocity',
+  'mp': 'Velocity',
+  'p': 'Velocity',
+  'pp': 'Velocity',
+  'ppp': 'Velocity',
+  'hard': 'Velocity',
+  'medium': 'Velocity',
+  'soft': 'Velocity',
+  'light': 'Velocity',
+};
 
 // App state
 const state = {
@@ -298,59 +294,81 @@ function updateDensityInfo() {
 }
 
 // Pattern Detection for Batch Grouping
+// This algorithm extracts FULL suffix patterns from filenames and groups by them
+// E.g., "_L1_RR2" and "_L2_RR2" are treated as different groups (not merged by RR2)
 function detectGroupingPatterns(files) {
-  // Try each pattern and see if it matches any files
-  const patternMatches = [];
+  if (files.length < 4) return null;
 
-  for (const pattern of GROUPING_PATTERNS) {
-    const groups = {};
-    const matched = [];
+  // Extract suffixes from all filenames
+  // A suffix is any sequence of _WORD or -WORD at the end (can be compound like _L1_RR2)
+  const suffixRegex = /([_-][A-Za-z]+\d*)+$/;
 
-    for (const file of files) {
-      // Remove extension for pattern matching
-      const baseName = file.name.replace(/\.[^/.]+$/, '');
-      const match = baseName.match(pattern.regex);
-
-      if (match) {
-        const groupKey = match[1].toUpperCase();
-        if (!groups[groupKey]) {
-          groups[groupKey] = [];
-        }
-        groups[groupKey].push(file);
-        matched.push(file);
-      }
-    }
-
-    const groupKeys = Object.keys(groups);
-    // Only consider this pattern if it matches multiple files AND creates multiple groups
-    if (groupKeys.length >= 2 && matched.length >= 4) {
-      patternMatches.push({
-        pattern,
-        groups,
-        matchedCount: matched.length,
-        groupCount: groupKeys.length
+  const fileSuffixes = [];
+  for (const file of files) {
+    const baseName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+    const match = baseName.match(suffixRegex);
+    if (match) {
+      fileSuffixes.push({
+        file,
+        baseName,
+        suffix: match[0].toUpperCase(),
+        baseWithoutSuffix: baseName.slice(0, -match[0].length)
       });
     }
   }
 
-  // No patterns found
-  if (patternMatches.length === 0) {
-    return null;
+  // Need at least 4 files with suffixes to consider grouping
+  if (fileSuffixes.length < 4) return null;
+
+  // Group files by their full suffix
+  const groups = {};
+  for (const item of fileSuffixes) {
+    if (!groups[item.suffix]) {
+      groups[item.suffix] = [];
+    }
+    groups[item.suffix].push(item.file);
   }
 
-  // Pick the best pattern (most files matched, then most groups)
-  patternMatches.sort((a, b) => {
-    if (b.matchedCount !== a.matchedCount) {
-      return b.matchedCount - a.matchedCount;
-    }
-    return b.groupCount - a.groupCount;
-  });
+  const groupKeys = Object.keys(groups);
 
-  const best = patternMatches[0];
+  // Need at least 2 groups to make grouping useful
+  if (groupKeys.length < 2) return null;
+
+  // Check that each group has at least 2 files (not just scattered one-offs)
+  const validGroups = {};
+  for (const [key, groupFiles] of Object.entries(groups)) {
+    if (groupFiles.length >= 2) {
+      validGroups[key] = groupFiles;
+    }
+  }
+
+  const validGroupKeys = Object.keys(validGroups);
+  if (validGroupKeys.length < 2) return null;
+
+  // Determine the label based on known patterns
+  let label = 'Variation';
+  let type = 'variation';
+
+  // Check all suffixes for known pattern types
+  const firstSuffix = validGroupKeys[0].toLowerCase();
+  for (const [pattern, patternLabel] of Object.entries(KNOWN_PATTERN_LABELS)) {
+    if (firstSuffix.includes(pattern)) {
+      label = patternLabel;
+      type = patternLabel.toLowerCase().replace(' ', '_');
+      break;
+    }
+  }
+
+  // If we have compound patterns (e.g., _L1_RR2), describe them better
+  if (validGroupKeys[0].split(/[_-]/).filter(Boolean).length > 1) {
+    label = 'Layer/Variation';
+    type = 'compound';
+  }
+
   return {
-    type: best.pattern.type,
-    label: best.pattern.label,
-    groups: best.groups
+    type,
+    label,
+    groups: validGroups
   };
 }
 
@@ -358,17 +376,16 @@ function detectGroupingPatterns(files) {
 function getBaseNameWithoutGroupSuffix(filename, patternInfo) {
   if (!patternInfo) return filename;
 
-  // Find which pattern matched
-  const baseName = filename.replace(/\.[^/.]+$/, '');
+  const baseName = filename.replace(/\.[^/.]+$/, ''); // Remove extension
+  const extension = filename.match(/\.[^/.]+$/)?.[0] || '';
 
-  for (const pattern of GROUPING_PATTERNS) {
-    if (pattern.type === patternInfo.type) {
-      const match = baseName.match(pattern.regex);
-      if (match) {
-        // Return the filename with the suffix removed
-        return baseName.replace(pattern.regex, '') + filename.match(/\.[^/.]+$/)?.[0] || '';
-      }
-    }
+  // Use the same suffix regex as detectGroupingPatterns
+  const suffixRegex = /([_-][A-Za-z]+\d*)+$/;
+  const match = baseName.match(suffixRegex);
+
+  if (match) {
+    // Return the filename with the suffix removed
+    return baseName.slice(0, -match[0].length) + extension;
   }
 
   return filename;
