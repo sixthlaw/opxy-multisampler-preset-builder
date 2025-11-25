@@ -3,7 +3,8 @@
 A simple, web-based tool for creating multisampler presets for the Teenage Engineering OP-XY. No installation required — just drag, drop, and download.
 
 **[USE the APP HERE →](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)** 
-| **[Watch the Tutorial →](https://youtu.be/IFNUySQX6XM)**
+|
+**[Watch the Tutorial →](https://youtu.be/IFNUySQX6XM)**
 
 [![Drag and drop your samples](drag-drop.png)](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)
 
