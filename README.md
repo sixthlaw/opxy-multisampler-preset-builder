@@ -41,8 +41,6 @@ No DAW required. No manual JSON editing. No command-line tools.
 3. **Name Your Preset** — Give it a memorable name
 4. **Download** — Get a ZIP containing your `.preset` folder
 
-[![Configure audio quality](audio-quality.png)](https://sixthlaw.github.io/opxy-multisampler-preset-builder/)
-
 That's it. Copy the `.preset` folder to your OP-XY and you're ready to play.
 
 ### Manual Note Assignment
